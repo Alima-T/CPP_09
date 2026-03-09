@@ -6,7 +6,7 @@
 /*   By: aokhapki <aokhapki@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/03 13:55:29 by aokhapki          #+#    #+#             */
-/*   Updated: 2026/03/09 16:24:32 by aokhapki         ###   ########.fr       */
+/*   Updated: 2026/03/09 16:28:46 by aokhapki         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,6 +54,26 @@ static bool isValidDate(int year, int month, int day)
 	return day <= maxDay;
 }
 
+static bool isValidDateFormat(const std::string& date)
+{
+    if (date.size() != 10)
+        return false;
+
+    if (date[4] != '-' || date[7] != '-')
+        return false;
+
+    for (int i = 0; i < 10; i++)
+    {
+        if (i == 4 || i == 7)
+            continue;
+
+        if (!isDigit(date[i]))
+            return false;
+    }
+
+    return true;
+}
+
 double BitcoinExchange::getRateForDateOrClosestLower(const std::string& date) const
 {
 	std::map<std::string, double>::const_iterator it = m_rates.lower_bound(date);
@@ -79,6 +99,8 @@ void BitcoinExchange::loadDB(const std::string& dbPath)
 			continue;
 		std::string date = trim(line.substr(0, commaPos));
 		std::string rateStr = trim(line.substr(commaPos + 1));
+		if(!isValidDateFormat(date))
+			continue;
 		double rate = std::atof(rateStr.c_str());
 		m_rates[date] = rate;
 	}
