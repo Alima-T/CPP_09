@@ -6,7 +6,7 @@
 /*   By: aokhapki <aokhapki@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/03 13:46:22 by aokhapki          #+#    #+#             */
-/*   Updated: 2026/03/03 13:55:24 by aokhapki         ###   ########.fr       */
+/*   Updated: 2026/03/03 22:18:57 by aokhapki         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,14 +20,15 @@ class BitcoinExchange
 {
 	private:
 		std::map<std::string, double> m_rates;
+		double getRateForDateOrClosestLower(const std::string& date) const;
 	public:
 		BitcoinExchange();
 		BitcoinExchange(const BitcoinExchange& src);
 		BitcoinExchange& operator=(const BitcoinExchange& rhs);
 		~BitcoinExchange();
 
-		// void loadDB(const std::string& dbPath);
-		
-}
+		void loadDB(const std::string& dbPath);
+		void processInput(const std::string& inputPath);
+};
 
 #endif
