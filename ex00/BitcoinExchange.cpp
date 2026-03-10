@@ -6,12 +6,17 @@
 /*   By: aokhapki <aokhapki@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/03 13:55:29 by aokhapki          #+#    #+#             */
-/*   Updated: 2026/03/09 16:28:46 by aokhapki         ###   ########.fr       */
+/*   Updated: 2026/03/10 12:25:11 by aokhapki         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "BitcoinExchange.hpp"
+
+#include <cerrno>
+#include <cstdlib>
 #include <fstream>
+#include <iostream>
+#include <stdexcept>
 
 BitcoinExchange::BitcoinExchange() : m_rates(){}
 
@@ -71,7 +76,21 @@ static bool isValidDateFormat(const std::string& date)
             return false;
     }
 
-    return true;
+	int year = std::atoi(date.substr(0, 4).c_str());
+	int month = std::atoi(date.substr(5, 2).c_str());
+	int day = std::atoi(date.substr(8, 2).c_str());
+
+    return isValidDate(year, month, day);
+}
+
+static bool parseDoubleStrict(const std::string& raw, double& out)
+{
+	errno = 0;
+	char* end = NULL;
+	out = std::strtod(raw.c_str(), &end);
+	if (raw.empty() || end == raw.c_str() || *end != '\0' || errno == ERANGE)
+		return false;
+	return true;
 }
 
 double BitcoinExchange::getRateForDateOrClosestLower(const std::string& date) const
@@ -79,7 +98,7 @@ double BitcoinExchange::getRateForDateOrClosestLower(const std::string& date) co
 	std::map<std::string, double>::const_iterator it = m_rates.lower_bound(date);
 	if(it != m_rates.end() && it->first == date)
 		return it->second;
-	if(it == m_rates.begin())
+	if(it == m_rates.begin() && (it == m_rates.end() || it->first > date))
 		throw std::runtime_error("No rate available for date " + date);
 	--it;
 	return it->second;
@@ -101,7 +120,75 @@ void BitcoinExchange::loadDB(const std::string& dbPath)
 		std::string rateStr = trim(line.substr(commaPos + 1));
 		if(!isValidDateFormat(date))
 			continue;
-		double rate = std::atof(rateStr.c_str());
+		double rate;
+		if (!parseDoubleStrict(rateStr, rate) || rate < 0)
+			continue;
 		m_rates[date] = rate;
+	}
+	if (m_rates.empty())
+		throw std::runtime_error("Database is empty.");
+}
+
+void BitcoinExchange::processInput(const std::string& inputPath)
+{
+	std::ifstream inputFile(inputPath.c_str());
+	if (!inputFile.is_open())
+	{
+		std::cout << "Error: could not open file." << std::endl;
+		return;
+	}
+
+	std::string line;
+	if (!std::getline(inputFile, line))
+		return;
+
+	while (std::getline(inputFile, line))
+	{
+		if (trim(line).empty())
+			continue;
+
+		std::size_t pipePos = line.find('|');
+		if (pipePos == std::string::npos)
+		{
+			std::cout << "Error: bad input => " << line << std::endl;
+			continue;
+		}
+
+		std::string date = trim(line.substr(0, pipePos));
+		std::string valueStr = trim(line.substr(pipePos + 1));
+
+		if (!isValidDateFormat(date))
+		{
+			std::cout << "Error: bad input => " << line << std::endl;
+			continue;
+		}
+
+		double value;
+		if (!parseDoubleStrict(valueStr, value))
+		{
+			std::cout << "Error: bad input => " << line << std::endl;
+			continue;
+		}
+
+		if (value < 0)
+		{
+			std::cout << "Error: not a positive number." << std::endl;
+			continue;
+		}
+		if (value > 1000)
+		{
+			std::cout << "Error: too large a number." << std::endl;
+			continue;
+		}
+
+		try
+		{
+			double rate = getRateForDateOrClosestLower(date);
+			std::cout << date << " => " << valueStr << " = " << (value * rate) << std::endl;
+		}
+		catch (...) 
+		{
+			std::cout << "Error: bad input => " << line << std::endl;
+		}
 	}
 }
