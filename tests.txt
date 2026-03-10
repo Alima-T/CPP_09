@@ -1,0 +1,13 @@
+make re
+Без аргумента: ./btc
+Нормальный кейс: ./btc input.txt
+Несуществующий файл: ./btc nofile.txt
+Дата раньше первой в базе:
+printf "date | value\n2008-12-31 | 1\n" > t1.txt
+./btc t1.txt
+Граница диапазона:
+printf "date | value\n2011-01-03 | 0\n2011-01-03 | 1000\n2011-01-03 | 1000.01\n" > t2.txt
+./btc t2.txt
+Невалидный формат:
+printf "date | value\n2011-01-03, 3\nabcd\n" > t3.txt
+./btc t3.txt
