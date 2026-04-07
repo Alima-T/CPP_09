@@ -6,11 +6,11 @@
 #    By: aokhapki <aokhapki@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/03/15 22:30:12 by aokhapki          #+#    #+#              #
-#    Updated: 2026/03/15 22:30:32 by aokhapki         ###   ########.fr        #
+#    Updated: 2026/04/07 23:15:32 by aokhapki         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
-NAME = rpn
+NAME = RPN
 SRCS = main.cpp RPN.cpp
 OBJS = $(SRCS:.cpp=.o)
 
