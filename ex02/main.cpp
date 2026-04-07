@@ -1,35 +1,29 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   PmergeMe.hpp                                       :+:      :+:    :+:   */
+/*   main.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: aokhapki <aokhapki@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/04/07 23:24:02 by aokhapki          #+#    #+#             */
-/*   Updated: 2026/04/07 23:43:02 by aokhapki         ###   ########.fr       */
+/*   Created: 2026/04/07 23:23:50 by aokhapki          #+#    #+#             */
+/*   Updated: 2026/04/07 23:43:59 by aokhapki         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef PMERGEME_HPP
-#define PMERGEME_HPP
-#include<vector>
-#include<queue>
+#include "PmergeMe.hpp"
+#include <iostream>
 
-class PmergeMe
+int main(int ac, char **av)
 {
-private:
-	std::vector<int>	m_vector;
-	std::queue<int>		m_queue;
-	
-public:
-	PmergeMe();
-	PmergeMe(const PmergeMe& src);
-	PmergeMe& operator=(const PmergeMe& rhs);
-	~PmergeMe();
-	void run(int ac, char **av);
-	
-};
-
-
-
-#endif
+	try
+	{
+		PmergeMe sorter;
+		sorter.run(ac, av);
+	}
+	catch(const std::exception& e)
+	{
+		std::cerr << e.what() << '\n';
+		return 1;
+	}
+	return 0;
+}
