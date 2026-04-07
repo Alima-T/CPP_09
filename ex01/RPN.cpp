@@ -6,7 +6,7 @@
 /*   By: aokhapki <aokhapki@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/15 22:33:44 by aokhapki          #+#    #+#             */
-/*   Updated: 2026/04/07 22:57:22 by aokhapki         ###   ########.fr       */
+/*   Updated: 2026/04/07 23:18:35 by aokhapki         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,6 +29,13 @@ RPN& RPN::operator=(const RPN& rhs)
 }
 
 RPN::~RPN() {}
+
+long long RPN::getResult() const
+{
+	if (m_stack.size() != 1)
+		throw std::runtime_error("Error");
+	return m_stack.top();
+}
 
 bool RPN::isOperator(const std::string& token)
 {

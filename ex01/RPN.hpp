@@ -34,6 +34,7 @@ public:
 	~RPN();
 	
 	void calculate(const std::string& expression);
+	long long getResult() const;
 };
 
 #endif
