@@ -6,7 +6,7 @@
 /*   By: aokhapki <aokhapki@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/07 23:33:07 by aokhapki          #+#    #+#             */
-/*   Updated: 2026/04/09 18:02:08 by aokhapki         ###   ########.fr       */
+/*   Updated: 2026/04/09 18:36:41 by aokhapki         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,9 +55,9 @@ static long parseNumber(const std::string& str)
     // 10 = десятичная система
     long num = std::strtol(str.c_str(), &endptr, 10);
     
-    // ПРОВЕРКА 1: Переполнение? (число больше INT_MAX)
-    // ПРОВЕРКА 2: Отрицательное число?
-    // ПРОВЕРКА 3: strtol не смог корректно преобразовать (ERANGE = ошибка)
+    // Переполнение? (число больше INT_MAX)
+    // Отрицательное число?
+    // strtol не смог корректно преобразовать (ERANGE = ошибка)
     if (errno == ERANGE || num > INT_MAX || num < 0)
         throw std::overflow_error("Number out of range or negative");
     
@@ -68,17 +68,37 @@ static long parseNumber(const std::string& str)
     return num;
 }
 
-
+/*
+    1. Проверить количество аргументов (нужно минимум 2: программа + 1 число)
+    2. Цикл по каждому аргументу (начиная с индекса 1, т.к. 0 - это имя программы)
+    3. Для каждого аргумента:
+       - Проверить, что это только цифры
+       - Преобразовать в число
+       - Добавить в оба контейнера (vector и deque)
+    4. Вывести исходный массив
+    5. Запустить сортировку и измерить время
+    6. Вывести результат
+*/
 void PmergeMe::run(int ac, char **av)
 {
-    // ШАГИ:
-    // 1. Проверить количество аргументов (нужно минимум 2: программа + 1 число)
-    // 2. Цикл по каждому аргументу (начиная с индекса 1, т.к. 0 - это имя программы)
-    // 3. Для каждого аргумента:
-    //    - Проверить, что это только цифры
-    //    - Преобразовать в число
-    //    - Добавить в оба контейнера (vector и deque)
-    // 4. Вывести исходный массив
-    // 5. Запустить сортировку и измерить время
-    // 6. Вывести результат
+	if(ac < 2)
+		throw std::invalid_argument("Error: usage is ./PmergeMe [positive int] ...") ;
+	for (int i = 1; i < ac; ++i)
+	{
+		// argv[i] - это const char* (C-строка)
+		// Нашим функциям нужен std::string&
+		// Конструктор std::string(const char*) преобразует их
+		// Теперь у тебя есть arg - это std::string с одним аргументом
+		// Дальше проверяешь: isValidPositivNumber(arg)
+		// И преобразуешь: parseNumber(arg)
+		std::string arg(av[i]);
+		if(!isValidPositivNumber(arg))
+			throw std::invalid_argument("Error: Invalid argument");
+		long num = parseNumber(arg);
+		m_vector.push_back(static_cast<int>(num));
+		m_deque.push_back(static_cast<int>(num));
+
+		//TODO 
+	}
+
 }
