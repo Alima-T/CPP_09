@@ -32,4 +32,4 @@
 *.out
 *.app
 # IDE files
-.vscode.github/copilot-instructions.md
+.github
