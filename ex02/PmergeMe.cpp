@@ -6,19 +6,22 @@
 /*   By: aokhapki <aokhapki@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/07 23:33:07 by aokhapki          #+#    #+#             */
-/*   Updated: 2026/04/13 20:03:39 by aokhapki         ###   ########.fr       */
+/*   Updated: 2026/04/13 20:50:12 by aokhapki         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "PmergeMe.hpp"
-#include <string>      // std::string для работы с аргументами
-#include <climits>     // INT_MAX для проверки диапазона int
-#include <iostream>    // std::cout / std::endl для вывода
+#include <string>
+#include <climits>
+#include <iostream>
 #include <algorithm>   // std::sort для сортировки контейнеров
 #include <chrono>      // std::chrono для замера времени
 #include <cstdlib>     // std::strtol для преобразования строки в число
 #include <cerrno>      // errno и ERANGE для контроля ошибок strtol
 #include <stdexcept>   // std::invalid_argument / std::overflow_error
+// m_vector и m_deque — поля класса, не new-указатели
+// у STL контейнеров память освобождается автоматически в деструкторе (RAII)
+// при завершении PmergeMe память сама очистится
 
 PmergeMe::PmergeMe(){}
 PmergeMe::PmergeMe(const PmergeMe& src)
@@ -60,21 +63,34 @@ static long parseNumber(const std::string& str)
     // 10 = десятичная система
     long num = std::strtol(str.c_str(), &endptr, 10);
     
-    // Переполнение? (число больше INT_MAX)
-    // Отрицательное число?
-    // strtol не смог корректно преобразовать (ERANGE = ошибка)
+    // Переполнение - INT_MAX/ negative / ERANGE = too large)
     if (errno == ERANGE || num > INT_MAX || num < 0)
         throw std::overflow_error("Number out of range or negative");
     
-    // ПРОВЕРКА 4: Остались ещё символы? (например "123abc")
+    // Остались ещё символы? (например "123abc")
     if (*endptr != '\0')
         throw std::invalid_argument("Invalid number format");
     
     return num;
 }
-
+// унифицированный хелпер для печати последовательности до сортировки.
+// как для vector, так и для deque, чтобы избежать дублирования кода.
+// it != c.end(); or < for vector, deque, but bestpractice template !=, because < impossible for list, set, map...
+//it — итератор, он указывает на текущий элемент контейнера.
+// *it — разыменование итератора, то есть сам элемент, на который он указывает.
+// std::cout << — отправить этот элемент в стандартный вывод.
+// ' ' — добавить после числа один пробел, чтобы элементы печатались не слитно, а через пробел.
+template <typename Container>
+static void printSequence(const std::string& label, const Container& c)
+{
+	std::cout << label;
+	for(typename Container::const_iterator it = c.begin(); it != c.end(); ++it)
+		std::cout << *it << ' ';
+	std::cout << std::endl;
+}
 /*
     1. Проверить количество аргументов (нужно минимум 2: программа + 1 число)
+	   .clear();// Очищаем контейнеры перед новым запуском.
     2. Цикл по каждому аргументу (начиная с индекса 1, т.к. 0 - это имя программы)
     3. Для каждого аргумента:
        - Проверить, что это только цифры
@@ -86,63 +102,38 @@ static long parseNumber(const std::string& str)
 */
 void PmergeMe::run(int ac, char **av)
 {
-	// Проверяем, что после имени программы передан хотя бы один аргумент.
-	// Если аргументов нет, то сортировать нечего и работа программы бессмысленна.
 	if(ac < 2)
 		throw std::invalid_argument("Error: usage is ./PmergeMe [positive int] ...") ;
-
-	// Очищаем контейнеры на случай повторного вызова run().
-	// Это защищает от ситуации, когда старые данные случайно смешались бы с новыми.
 	m_vector.clear();
 	m_deque.clear();
 
-	// Заранее выделяем память под vector.
-	// Это уменьшает число перераспределений памяти при добавлении элементов.
 	m_vector.reserve(static_cast<std::size_t>(ac - 1));
 	for (int i = 1; i < ac; ++i)
 	{
-		// Каждый argv[i] приходит как C-строка, поэтому сначала переводим её в std::string.
-		// Так удобнее выполнять проверки и преобразования.
+		// argv[i] приходит как C-строка(char*), переводим её в std::string.
 		std::string arg(av[i]);
-
-		// Проверяем только внешний формат строки: она должна состоять из цифр.
-		// На этом этапе отбрасываем пробелы, знаки, буквы и любые смешанные значения.
+		// должна состоять из цифр, исключаем варианты: пробелы, знаки, буквы и тд
 		if(!isValidPositivNumber(arg))
 			throw std::invalid_argument("Error: Invalid argument");
-
-		// Преобразуем строку в число и дополнительно проверяем переполнение.
-		// Это защищает от слишком больших значений и некорректного разбора строки.
+		// Преобразуем строку в число и проверяем переполнение.
 		long num = parseNumber(arg);
 
-		// Кладём одно и то же значение в оба контейнера.
-		// Это нужно, чтобы потом сравнить их сортировку на одинаковых данных.
+		// Кладём одно и то же значение в оба контейнера, чтобы сравнить их сортировку.
 		m_vector.push_back(static_cast<int>(num));
 		m_deque.push_back(static_cast<int>(num));
 	}
 
 	// Выводим исходную последовательность до сортировки.
 	// Печатаем именно vector, потому что его содержимое полностью совпадает с deque.
-	std::cout << "Before: ";
 	// Идём по контейнеру итератором и печатаем каждый элемент.
-	// Используем const_iterator, потому что элементы здесь только читаются.
-	for (std::vector<int>::const_iterator it = m_vector.begin(); it != m_vector.end(); ++it)
-		std::cout << *it << ' '; 
-	//it — итератор, он указывает на текущий элемент контейнера.
-	// *it — разыменование итератора, то есть сам элемент, на который он указывает.
-	// std::cout << — отправить этот элемент в стандартный вывод.
-	// ' ' — добавить после числа один пробел, чтобы элементы печатались не слитно, а через пробел.
-	// Завершаем строку, чтобы следующий вывод начался с новой линии.
-	std::cout << std::endl;
-
+	printSequence<std::vector<int>>("Before: ", m_vector);
 	// Фиксируем момент времени перед сортировкой vector.
 	// high_resolution_clock используем, чтобы получить максимально точный замер.
 	std::chrono::high_resolution_clock::time_point vStart = std::chrono::high_resolution_clock::now();
-	// Сортируем vector стандартным алгоритмом.
-	// Пока это базовая реализация, чтобы проверить логику парсинга и вывода.
+	// Сортируем vector стандартным алгоритмом, чтобы проверить логику парсинга и вывода.
 	std::sort(m_vector.begin(), m_vector.end());
 	// Фиксируем момент времени сразу после сортировки vector.
 	std::chrono::high_resolution_clock::time_point vEnd = std::chrono::high_resolution_clock::now();
-
 	// Повторяем тот же замер для deque, чтобы сравнение было честным.
 	std::chrono::high_resolution_clock::time_point dStart = std::chrono::high_resolution_clock::now();
 	// Сортируем deque тем же алгоритмом.
@@ -152,13 +143,7 @@ void PmergeMe::run(int ac, char **av)
 
 	// Выводим отсортированную последовательность.
 	// Показываем только vector, потому что deque был заполнен теми же значениями.
-	std::cout << "After:  ";
-	// Снова печатаем все элементы по порядку, но уже после сортировки.
-	for (std::vector<int>::const_iterator it = m_vector.begin(); it != m_vector.end(); ++it)
-		std::cout << *it << ' ';
-	// Перевод строки нужен для аккуратного вывода времени ниже.
-	std::cout << std::endl;
-
+	printSequence(std::string("After: "), m_vector);
 	// Печатаем время обработки vector.
 	// duration_cast переводит разницу времени в микросекунды.
 	std::cout << "Time to process a range of " << m_vector.size()
