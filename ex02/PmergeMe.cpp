@@ -6,7 +6,7 @@
 /*   By: aokhapki <aokhapki@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/07 23:33:07 by aokhapki          #+#    #+#             */
-/*   Updated: 2026/04/13 20:50:12 by aokhapki         ###   ########.fr       */
+/*   Updated: 2026/04/13 21:33:55 by aokhapki         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,10 +14,10 @@
 #include <string>
 #include <climits>
 #include <iostream>
-#include <algorithm>   // std::sort для сортировки контейнеров
-#include <chrono>      // std::chrono для замера времени
-#include <cstdlib>     // std::strtol для преобразования строки в число
-#include <cerrno>      // errno и ERANGE для контроля ошибок strtol
+#include <algorithm>   // std::sort 
+#include <chrono>      // time 1 ms = 1000 us / 1 us = 1000 ns
+#include <cstdlib>     // std::strtol string to int
+#include <cerrno>      // errno и ERANGE in strtol
 #include <stdexcept>   // std::invalid_argument / std::overflow_error
 // m_vector и m_deque — поля класса, не new-указатели
 // у STL контейнеров память освобождается автоматически в деструкторе (RAII)
@@ -88,6 +88,16 @@ static void printSequence(const std::string& label, const Container& c)
 		std::cout << *it << ' ';
 	std::cout << std::endl;
 }
+//duration_cast переводит разницу времени в микросекунды.
+template <typename Container>
+static long long sortAndMeasureUs(Container& c)
+{
+	std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+	std::sort(c.begin(), c.end());
+	std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+	return std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(); // count() - берёт числовое значение из объекта std::chrono::duration.
+}
+
 /*
     1. Проверить количество аргументов (нужно минимум 2: программа + 1 число)
 	   .clear();// Очищаем контейнеры перед новым запуском.
@@ -127,35 +137,19 @@ void PmergeMe::run(int ac, char **av)
 	// Печатаем именно vector, потому что его содержимое полностью совпадает с deque.
 	// Идём по контейнеру итератором и печатаем каждый элемент.
 	printSequence<std::vector<int>>("Before: ", m_vector);
-	// Фиксируем момент времени перед сортировкой vector.
-	// high_resolution_clock используем, чтобы получить максимально точный замер.
-	std::chrono::high_resolution_clock::time_point vStart = std::chrono::high_resolution_clock::now();
-	// Сортируем vector стандартным алгоритмом, чтобы проверить логику парсинга и вывода.
-	std::sort(m_vector.begin(), m_vector.end());
-	// Фиксируем момент времени сразу после сортировки vector.
-	std::chrono::high_resolution_clock::time_point vEnd = std::chrono::high_resolution_clock::now();
-	// Повторяем тот же замер для deque, чтобы сравнение было честным.
-	std::chrono::high_resolution_clock::time_point dStart = std::chrono::high_resolution_clock::now();
-	// Сортируем deque тем же алгоритмом.
-	std::sort(m_deque.begin(), m_deque.end());
-	// Сохраняем время окончания сортировки deque.
-	std::chrono::high_resolution_clock::time_point dEnd = std::chrono::high_resolution_clock::now();
-
-	// Выводим отсортированную последовательность.
-	// Показываем только vector, потому что deque был заполнен теми же значениями.
+	// Сортируем и меряем время через один helper для обоих контейнеров.
+	long long vectorTimeUs = sortAndMeasureUs(m_vector);
+	long long dequeTimeUs = sortAndMeasureUs(m_deque);
+	// Выводим отсортированную последовательность, только vector, тк deque заполнен теми же значениями.
 	printSequence(std::string("After: "), m_vector);
-	// Печатаем время обработки vector.
-	// duration_cast переводит разницу времени в микросекунды.
+	// Печатаем время обработки vector. 
 	std::cout << "Time to process a range of " << m_vector.size()
-		<< " elements with std::vector : "
-		<< std::chrono::duration_cast<std::chrono::microseconds>(vEnd - vStart).count()
-		<< " us" << std::endl;
+		<< " elements with std::vector : " << vectorTimeUs << " us" << std::endl;
 	// Печатаем аналогичное время для deque, чтобы можно было сравнить структуры.
 	std::cout << "Time to process a range of " << m_deque.size()
-		<< " elements with std::deque  : "
-		<< std::chrono::duration_cast<std::chrono::microseconds>(dEnd - dStart).count()
-		<< " us" << std::endl;
-
+		<< " elements with std::deque  : " << dequeTimeUs << " us" << std::endl;
 }
+
+
 
 
