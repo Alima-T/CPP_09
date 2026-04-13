@@ -6,7 +6,7 @@
 /*   By: aokhapki <aokhapki@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/07 23:33:07 by aokhapki          #+#    #+#             */
-/*   Updated: 2026/04/13 19:51:55 by aokhapki         ###   ########.fr       */
+/*   Updated: 2026/04/13 20:03:39 by aokhapki         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,18 +37,6 @@ PmergeMe& PmergeMe::operator=(const PmergeMe& rhs)
 }
 
 PmergeMe::~PmergeMe(){}
-
-//// Печатаем исходную последовательность до сортировки. 
-////унифицированный метод для печати как vector, так и deque, чтобы избежать дублирования кода.
-// template <typename Container>
-// static void printSequence(const std::string& prefix, const std::vector<int>& c)
-// {
-// 	std::cout << prefix;
-// 	for(typename Container::const_iterator it = c.begin(); it < c.end(); ++it)
-// 		std::cout << *it << ' ';
-// 	std::cout << std::endl;
-// }
-
 
 static bool isValidPositivNumber(const std::string& str)
 {
