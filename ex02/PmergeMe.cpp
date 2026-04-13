@@ -6,7 +6,7 @@
 /*   By: aokhapki <aokhapki@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/07 23:33:07 by aokhapki          #+#    #+#             */
-/*   Updated: 2026/04/13 21:33:55 by aokhapki         ###   ########.fr       */
+/*   Updated: 2026/04/13 23:54:42 by aokhapki         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -88,14 +88,32 @@ static void printSequence(const std::string& label, const Container& c)
 		std::cout << *it << ' ';
 	std::cout << std::endl;
 }
-//duration_cast переводит разницу времени в микросекунды.
-template <typename Container>
-static long long sortAndMeasureUs(Container& c)
+// duration_cast переводит разницу времени в микросекунды.
+// count() - берёт числовое значение из объекта std::chrono::duration.
+
+// template <typename Container>
+// static long long sortAndMeasureUs(Container& c)
+// {
+// 	std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+// 	std::sort(c.begin(), c.end());
+// 	std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+// 	return std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(); // count() - берёт числовое значение из объекта std::chrono::duration.
+// }
+
+long long PmergeMe::sortVectorFordJohnson()
 {
 	std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
-	std::sort(c.begin(), c.end());
+	std::sort(m_vector.begin(), m_vector.end());
 	std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
-	return std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(); // count() - берёт числовое значение из объекта std::chrono::duration.
+	return std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+}
+
+long long PmergeMe::sortDequeFordJohnson()
+{
+	std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+	std::sort(m_deque.begin(), m_deque.end());
+	std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+	return std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 }
 
 /*
@@ -138,8 +156,8 @@ void PmergeMe::run(int ac, char **av)
 	// Идём по контейнеру итератором и печатаем каждый элемент.
 	printSequence<std::vector<int>>("Before: ", m_vector);
 	// Сортируем и меряем время через один helper для обоих контейнеров.
-	long long vectorTimeUs = sortAndMeasureUs(m_vector);
-	long long dequeTimeUs = sortAndMeasureUs(m_deque);
+	long long vectorTimeUs = sortVectorFordJohnson();
+	long long dequeTimeUs = sortDequeFordJohnson();
 	// Выводим отсортированную последовательность, только vector, тк deque заполнен теми же значениями.
 	printSequence(std::string("After: "), m_vector);
 	// Печатаем время обработки vector. 
