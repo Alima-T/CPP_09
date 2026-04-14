@@ -6,7 +6,7 @@
 /*   By: aokhapki <aokhapki@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/07 23:33:07 by aokhapki          #+#    #+#             */
-/*   Updated: 2026/04/14 14:23:37 by aokhapki         ###   ########.fr       */
+/*   Updated: 2026/04/14 16:02:07 by aokhapki         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 #include <chrono>      // time 1 ms = 1000 us / 1 us = 1000 ns
 #include <cstdlib>     // std::strtol string to int
 #include <cerrno>      // errno и ERANGE in strtol
+#include <utility>     // std::pair / std::make_pair
 #include <stdexcept>   // std::invalid_argument / std::overflow_error
 // m_vector и m_deque — поля класса, не new-указатели
 // у STL контейнеров память освобождается автоматически в деструкторе (RAII)
@@ -90,6 +91,82 @@ static void printSequence(const std::string& label, const Container& c)
 		std::cout << *it << ' ';
 	std::cout << std::endl;
 }
+
+static std::vector<std::size_t> buildJacobsthalInsertionOrder(std::size_t pairCount)
+{
+	// order хранит 1-based индексы пар в порядке, в котором smaller будут вставляться в mainChain.
+	std::vector<std::size_t> order;
+
+	// Если пар нет, порядок вставки пуст.
+	if (pairCount == 0)
+		return order;
+
+	// Первая пара всегда идёт первой.
+	order.push_back(1);
+
+	// Если пара только одна, больше ничего строить не нужно.
+	if (pairCount == 1)
+		return order;
+
+	// Jacobsthal-последовательность задаёт границы групп.
+	// Мы используем её, чтобы вставлять smaller в порядке,
+	// который уменьшает число сравнений при binary search.
+	std::size_t previousJacobsthal = 1;
+	std::size_t currentJacobsthal = 3;
+
+	// Пока не обработали все пары, формируем очередную группу индексов.
+	while (previousJacobsthal < pairCount)
+	{
+		// Если текущая Jacobsthal-граница больше количества пар,
+		// ограничиваемся реальным числом пар.
+		std::size_t upperBound = std::min(currentJacobsthal, pairCount);
+
+		// Внутри группы идём справа налево.
+		// Это важно: мы не просто перебираем пары по возрастанию,
+		// а строим именно нужный порядок вставки.
+		for (std::size_t index = upperBound; index > previousJacobsthal; --index)
+			order.push_back(index);
+
+		// Переходим к следующему Jacobsthal-значению по формуле
+		// J(n) = J(n - 1) + 2 * J(n - 2).
+		std::size_t nextJacobsthal = currentJacobsthal + 2 * previousJacobsthal;
+		previousJacobsthal = currentJacobsthal;
+		currentJacobsthal = nextJacobsthal;
+	}
+
+	// Возвращаем готовый порядок вставки.
+	return order;
+}
+/*
+Jacobsthal — это последовательность чисел, похожая на Fibonacci, но с другой формулой.
+J(0) = 0
+J(1) = 1
+J(n) = J(n - 1) + 2 * J(n - 2)
+*/
+template <typename Chain, typename PairsContainer>
+static void insertSmallerValuesInJacobsthalOrder(Chain& mainChain,
+	const PairsContainer& pairs)
+{
+	// Строим порядок 1-based индексов пар (например: 1, 3, 2, 5, 4, ...),
+	// по которому будем вставлять smaller-элементы.
+	const std::vector<std::size_t> order = buildJacobsthalInsertionOrder(pairs.size());
+
+	// Проходим по готовому порядку и вставляем smaller из каждой пары.
+	for (std::size_t i = 0; i < order.size(); ++i)
+	{
+		// order хранит 1-based индекс, а контейнер pairs — 0-based.
+		std::size_t pairIndex = order[i] - 1;
+
+		// Ищем позицию для вставки в уже отсортированной mainChain,
+		// чтобы после вставки порядок оставался отсортированным.
+		typename Chain::iterator pos = std::lower_bound(
+			mainChain.begin(), mainChain.end(), pairs[pairIndex].first);
+
+		// Вставляем smaller-элемент выбранной пары в найденную позицию.
+		mainChain.insert(pos, pairs[pairIndex].first);
+	}
+}
+
 
 /*
 run: orchestration (подготовка и вызов) = центр “дирижер”, а sortVectorFordJohnson() и sortDequeFordJohnson() = “исполнители”.
@@ -171,16 +248,18 @@ long long PmergeMe::sortVectorFordJohnson()
 		mainChain.push_back(pairs[i].second);
 	}
 
-	// Шаг 2.4: вставить smaller элементы бинарным поиском в main chain.
-	// lower_bound находит первую позицию, где элемент >= smaller.
-	// Вставляем в эту позицию, чтобы maintain sorted order.
-	for (std::size_t i = 0; i < pairs.size(); ++i) {
-		int smaller = pairs[i].first;
-		std::vector<int>::iterator pos = std::lower_bound(
-			mainChain.begin(), mainChain.end(), smaller);
-		mainChain.insert(pos, smaller);
-	}
-
+	// // Шаг 2.4: вставить smaller элементы бинарным поиском в main chain.
+	// // lower_bound находит первую позицию, где элемент >= smaller.
+	// // Вставляем в эту позицию, чтобы maintain sorted order.
+	// for (std::size_t i = 0; i < pairs.size(); ++i) {
+	// 	int smaller = pairs[i].first;
+	// 	std::vector<int>::iterator pos = std::lower_bound(
+	// 		mainChain.begin(), mainChain.end(), smaller);
+	// 	mainChain.insert(pos, smaller);
+	// }
+	
+	// Шаг 2.4: вставить smaller элементы в порядке Jacobsthal.
+	insertSmallerValuesInJacobsthalOrder(mainChain, pairs);
 	// Шаг 2.5: если был непарный элемент, вставить его в mainChain.
 	if (hasUnpaired) {
 		std::vector<int>::iterator pos = std::lower_bound(
@@ -215,43 +294,38 @@ long long PmergeMe::sortDequeFordJohnson()
 	// no need to reserve memory for deque, because it will grow dynamically as we push_back pairs.
 	bool hasUnpaired = (m_deque.size() % 2 != 0);
 	int unpaired = 0;
-	if(hasUnpaired)
+	if (hasUnpaired)
 		unpaired = m_deque.back(); // сохраняем последний элемент, если он непарный, для дальнейшей вставки в mainChain
-	for(std::size_t i = 0; i + 1 < m_deque.size(); i += 2)
+	for (std::size_t i = 0; i + 1 < m_deque.size(); i += 2)
 	{
 		int left = m_deque[i];
 		int right = m_deque[i + 1];
-		if(left <= right)
+		if (left <= right)
 			pairs.push_back(std::make_pair(left, right));
 		else
 			pairs.push_back(std::make_pair(right, left));
 	}
-	std::sort(pairs.begin(),pairs.end(),
+ 
+	std::sort(pairs.begin(), pairs.end(),
 		[](const std::pair<int, int>& a, const std::pair<int, int>& b)
 		{
 			return a.second < b.second; // сортируем по larger элементу (second) в каждой паре
 		});
-	std::vector<int> mainChain;
-	mainChain.reserve(pairs.size()); // выделяем память для mainChain, который вначале будет содержать только larger элементы из пар, потом мы довставляем smaller элементы
-	for(std::size_t i = 0; i < pairs.size(); ++i)
-	{
-		mainChain.push_back(pairs[i].second); // заполняем mainChain только larger элементами из пар, они уже отсортированы по возрастанию
-	}
-//lower_bound находит место вставки в отсортированном диапазоне.
-// Ищет первую позицию, где элемент не меньше заданного значения (>= smaller).
-// Возвращает итератор на эту позицию.
-	for(std::size_t i = 0; i < pairs.size(); ++i)
-	{
-		int smaller = pairs[i].first; // smaller (у нас 1-й элемент из пары smaller)
-		std::vector<int>::iterator pos = std::lower_bound(mainChain.begin(), mainChain.end(), smaller); // находим позицию для вставки smaller в mainChain, чтобы сохранить сортировку
-		mainChain.insert(pos, smaller); // вставляем smaller в найденную позицию, mainChain остаётся отсортированным
 
-	}
-	if(hasUnpaired)
+	std::deque<int> mainChain;
+	for (std::size_t i = 0; i < pairs.size(); ++i)
 	{
-		mainChain.insert(std::lower_bound(mainChain.begin(), mainChain.end(), unpaired), unpaired); // if there is an unpaired element, insert it into mainChain the same way as smaller
+		mainChain.push_back(pairs[i].second);
 	}
-	m_deque.assign(mainChain.begin(), mainChain.end()); // копируем отсортированный mainChain обратно в m_deque
+	insertSmallerValuesInJacobsthalOrder(mainChain, pairs);
+
+	if (hasUnpaired)
+	{
+		// std::deque<int>::iterator pos = std::lower_bound(mainChain.begin(), mainChain.end(), unpaired);
+		// mainChain.insert(pos, unpaired);
+		mainChain.insert(std::lower_bound(mainChain.begin(), mainChain.end(), unpaired), unpaired);
+	}
+	m_deque = mainChain;
 	std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
 	return std::chrono::duration_cast<std::chrono::microseconds> (end - start).count();
 }
