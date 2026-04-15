@@ -231,6 +231,15 @@ Output: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 77
 
 The algorithm uses **recursive merge sort** for sorting pairs by their second value, which follows the Ford-Johnson merge-insert definition from TAOCP Vol.3 (page 184). This ensures the implementation complies with the classical algorithm as described in Donald Knuth's work.
 
+## Complexity note
+
+This implementation is a hybrid approach: merge phase plus insertion phase.
+
+- Merge alone is `O(n log n)`.
+- Insertion alone is `O(n^2)`.
+- In this Ford-Johnson implementation, comparison behavior is close to `O(n log n)`.
+- Real runtime can approach `O(n^2)` because middle insertions in containers require element shifts.
+
 ## Memory management
 
 There are no memory leaks in this program because:
