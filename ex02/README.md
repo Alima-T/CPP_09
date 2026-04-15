@@ -127,6 +127,8 @@ For 10 pairs, the next boundary after 11 is bigger than the number of pairs, so 
 
 Formula: `J(n) = J(n-1) + 2 × J(n-2)`
 
+### Jacobsthal deeper explanaition:
+
 **Step 0: Initialize**
 
 ```

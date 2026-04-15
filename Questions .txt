@@ -1,0 +1,493 @@
+Each program uses STL containers and strict input checks.  
+Goal is not only to make code work, but also to handle bad input and show clean logic.
+
+**Ex00 shows map and data parsing.
+In Exercise 00, I made a Bitcoin exchange calculator.
+
+Program reads a database file with date and exchange rate.  
+Then it reads input lines like date and value.  
+For each line, it finds the correct rate for this date and prints result.
+
+Important points:
+1. I used map for fast search by date.
+2. If exact date is missing, program uses closest previous date.
+3. I added validation for bad date, bad number, negative value, too large value, wrong format, and missing file.
+4. Program prints clear error messages, not crash.
+
+So, this exercise is about parsing text, validating data, and using map correctly.
+
+**Ex01 shows stack and expression evaluation.
+I made an RPN calculator.
+
+RPN means Reverse Polish Notation.  
+Example: 3 4 + 2 *.
+
+Important points:
+1. I used stack.
+2. If token is number, push to stack.
+3. If token is operator, pop two numbers, calculate, push result back.
+4. At the end, stack must contain exactly one result.
+5. I handle errors: bad token, not enough operands, invalid expression, division issues, empty input.
+
+So, this exercise is about stack logic and safe expression evaluation.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+**Ex 02 shows advanced sorting design, Jacobsthal insertion logic, container comparison
+I implemented Ford-Johnson merge-insert sort for two containers: vector and deque.  
+Then I compared their time.
+I explain step by step what I did and why.
+
+1. Input parsing and validation  
+First, I read all numbers from command line.  
+I accept only positive integers.  
+I reject zero, negative numbers, overflow, mixed strings like 12abc, and wrong formats.  
+Why: sorting is useless if input is not reliable, so validation is first defense.
+
+2. Keep original input  
+I keep original numbers for printing Before line.  
+Why: subject asks to show data before and after sorting.
+
+3. Split into pairs  
+I group numbers by two.  
+For each pair, I put smaller value first and bigger value second.  
+If count is odd, one value stays unpaired.  
+Why: this is base idea of Ford-Johnson.  
+By putting smaller first, I know relation inside each pair.
+
+4. Sort pairs by second value  
+Then I sort all pairs using second number of each pair.  
+I used recursive merge sort for this part.  Why:
+1. It follows Ford-Johnson merge-insert idea from classical description.
+
+5. Build main chain  
+After pair sorting, I take all second values and make main sorted chain.  
+Why: second values are already ordered after previous step, so this is a strong base chain.
+
+6. Prepare insertion order with Jacobsthal sequence  
+Now I must insert first values of pairs into main chain.  
+I do not insert left to right. I generate Jacobsthal-based order, 
+for example pattern like 1, 3, 2, 5, 4, then next block in reverse.  
+Why: this order reduces number of comparisons in binary insertion.  
+Main idea: better order means fewer compare operations overall.
+
+7. Insert first values with binary search  
+For each index from Jacobsthal order, I take first value from that pair and insert into main chain with lower_bound.  
+Why: lower_bound is binary search insertion point, so insertion decision is efficient.
+
+8. Insert unpaired value  
+If input size was odd, one element was outside pairs.  
+I insert it at correct position with lower_bound too.  
+
+
+9. Build two versions: vector and deque  
+I run same algorithm for vector and for deque.  
+Subject asks to compare containers, not just one implementation result.
+
+10. I measure processing time in microseconds for vector and deque separately and print. 
+1. Before
+2. After
+3. Time for vector
+4. Time for deque  
+
+11. Error handling and robustness (Stärke прочность)
+Program returns error code on invalid input.  
+It prints clear error messages.  
+No raw pointers and no manual memory management, no leaks.
+
+12. Testing strategy  
+I tested:
+1. Basic small lists
+2. Duplicates
+3. Invalid arguments
+4. Random bigger lists
+5. 3000 numbers from subject style
+6. Leak checks and return codes  
+
+Complexity note
+This implementation is a hybrid approach: merge phase plus insertion phase.
+Merge alone is O(n log n).
+Insertion alone is O(n^2).
+In this Ford-Johnson implementation, comparison behavior is close to O(n log n).
+Real runtime can approach O(n^2) because middle insertions in containers require element shifts.
+If you want, I can also show step-by-step on one small example, so every step is visible.Great, here is a simple board-style example you can say in defense.
+
+Input:
+8 3 7 2 9
+Before
+8 3 7 2 9
+
+Make pairs (small, big)
+(3, 8) from 8 3
+(2, 7) from 7 2
+9 is unpaired (odd count)
+Sort pairs by big (second value)
+Pairs become:
+(2, 7)
+(3, 8)
+Build mainChain from big values
+[7, 8]
+Build insertion order (Jacobsthal style)
+For 2 pairs, order is basically: first pair, then second pair.
+
+Insert small values with lower_bound
+Insert 2 into [7, 8] -> [2, 7, 8]
+Insert 3 into [2, 7, 8] -> [2, 3, 7, 8]
+Insert unpaired value 9
+[2, 3, 7, 8, 9]
+
+After
+2 3 7 8 9
+
+“I do exactly same logic for vector and deque.”
+“I print time for both containers.”
+“That is why output has Before, After, vector time, deque time.”
+Example:Input: 18 3 7 14 2 19 9 5 11 1 16 8 4 20 6 12 17 10 15 13 77
+
+1-2: Pairs and sorting by second (bigger)
+(18,3)→(3,18)    (7,14)→(7,14)    (2,19)→(2,19)   (9,5)→(5,9)    (11,1)→(1,11)(16,8)→(8,16)    (4,20)→(4,20)    (6,12)→(6,12)   (17,10)→(10,17) (15,13)→(13,15) 77 - unpaired
+After sorting by pair.second:
+№1:(5,9)  №2:(1,11)  №3:(6,12)  №4:(7,14)  №5:(13,15)  №6:(8,16)  №7:(10,17)  №8:(3,18)  №9:(2,19)  №10:(4,20)
+mainChain = [9, 11, 12, 14, 15, 16, 17, 18, 19, 20]
+
+3: Jacobsthal порядок вставки
+Indexes: 1, 3, 2, 5, 4, 10, 9, 8, 7, 6
+4: Вставляем меньшие значения
+№	index		pair	insert 	mainChain
+  1	  1		(5,9)	      5	[5, 9, 11, 12, 14, 15, 16, 17, 18, 19, 20]
+  2	  3		(6,12)       6	[5, 6, 9, 11, 12, 14, 15, 16, 17, 18, 19, 20]
+  3	  2		(1,11)	      1	[1, 5, 6, 9, 11, 12, 14, 15, 16, 17, 18, 19, 20]
+  4	  5		(13,15)   13	[1, 5, 6, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+  5	  4		(7,14)       7	[1, 5, 6, 7, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+  6	10		(4,20)       4	[1, 4, 5, 6, 7, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+  7	  9		(2,19)       2	[1, 2, 4, 5, 6, 7, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+  8	  8		(3,18)       3	[1, 2, 3, 4, 5, 6, 7, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+  9	  7		(10,17)   10	[1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+10	  6		(8,16)       8	[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+
+5: insert unpaired  77 
+mainChain = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 77]
+
+Final:
+Output: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 77 ✓3: Jacobsthal deeper explanaition:
+Step 0: Initialize
+order = [1]               (first pair is always first)
+previousJacobsthal = 1
+currentJacobsthal = 3
+Step 1: Group from 1 to 3
+Is previousJacobsthal(1) < pairCount(10)?  YES
+upperBound = min(3, 10) = 3
+Add in reverse order from 3 down to 1 (but skip 1 itself):
+  3, 2
+order = [1, 3, 2]
+Move to next:
+  nextJacobsthal = 3 + 2×1 = 5
+  previousJacobsthal = 3
+  currentJacobsthal = 5
+Step 2: Group from 3 to 5
+Is previousJacobsthal(3) < pairCount(10)?  YES
+upperBound = min(5, 10) = 5
+Add in reverse order from 5 down to 3 (skip 3):
+  5, 4
+order = [1, 3, 2, 5, 4]
+Move to next:
+  nextJacobsthal = 5 + 2×3 = 11
+  previousJacobsthal = 5
+  currentJacobsthal = 11
+Step 3: Group from 5 to 11
+Is previousJacobsthal(5) < pairCount(10)?  YES
+upperBound = min(11, 10) = 10  (capped at 10 because we only have 10 pairs)
+Add in reverse order from 10 down to 5 (skip 5):
+  10, 9, 8, 7, 6
+order = [1, 3, 2, 5, 4, 10, 9, 8, 7, 6]
+Move to next:
+  nextJacobsthal = 11 + 2×5 = 21
+  previousJacobsthal = 11
+  currentJacobsthal = 21
+Step 4: Check if done
+Is previousJacobsthal(11) < pairCount(10)?  NO
+Stop - all pairs are processed
+
+The purpose of this module is to use the STL. Then, using thecontainers is authorized.
+Any of these means you must not grade the exercise in question:
+A function is implemented in a header file (except for template functions).
+A Makefile compiles without the required flags and/or another compiler than c++.
+Any of these means that you must flag the project with "ForbiddenFunction":
+Use of a "C" function (*alloc, *printf, free).
+Use of a function not allowed in the exercise guidelines.
+Use of an external library, or features from versions other than C++98.
+Exercise 00: Bitcoin Exchange
+For this first exercise, you have to find a makefile with the usual compilation rules and the files requested in the subject.
+Code review
+Check that a makefile is present with the usual compilation rules.
+Check in the code that the program uses at least one container.
+The person being evaluated must explain why they chose to use thiscontainer and not another?
+If not, the evaluation stops here.
+Error handle
+You must be able to use an empty file or a file with errors(a basic example exists in the subject). The program must not stopits execution before having performed the operations on the wholefile passed as argument.
+You can use a wrong date.
+You can enter a value greater than 1000 or less than 0.
+If there is any problem during the execution then the evaluation stops here.
+Main usage
+You must now use the "input.csv" file located at the top of this page.
+You can modify this file with the values you want.
+You have to run the program with the input.csv file as parameter.
+Please compare some dates manually with the specified value.
+If the date does not exist in the database, the program will have to use thenearest lower date.
+Exercise 01: Reverse Polish Notation
+For this second exercise, you have to find a makefile with the usual compilation rules and the files requested in the subject.
+Code review
+Check that a makefile is present with the usual compilation rules.
+Check in the code that the program uses at least one container.
+The person being evaluated must explain why they chose touse this container and not another?
+If not, the evaluation stops here.
+If the container chosen here is present in the first exercisethen the evaluation stops here.
+Main usage
+Check that the program runs correctly using different formulas of your choice.
+The program is not required to handle expressions with parenthesis or decimalsnumber.
+If there is any problem during the execution then the evaluation stops here.
+Usage advanced
+Check that the program runs correctly using different formulas of your choice.
+Here is some tests:
+8 9 * 9 - 9 - 9 - 4 - 1 +
+  > Result: 42
+  
+  9 8 * 4 * 4 / 2 + 9 - 8 - 8 - 1 - 6 -
+  > Result: 42
+  
+  1 2 * 2 / 2 + 5 * 6 - 1 3 * - 4 5 * * 8 / 
+  > Result: 15
+  
+You can use the examples in the topic if you don't know which formula to use.
+If there is any problem during the execution then the evaluation stops here.
+
+Exercise 02: PmergeMe
+As usual, there has to be enough tests to prove the program works as expected. If there isn't, do not grade this exercise. If any non-interface class is not in orthodox canonical class form, do not grade this exercise.
+Code review
+Check that a makefile is included with the usual compilation rules rules.
+Check in the code that the program uses at least two containers.
+If not, the evaluation stops here.
+The person being evaluated must explain why they chose to use these containersand not another?
+Check in the code that the merge-insert sort algorithm is present andis used for each container. The Ford-Johnson algorithm must be used.A brief explanation is expected. In case of doubt, the evaluation stops here.
+If one of the containers chosen here is included in one of the previousexercises then the evaluation stops here.
+Main usage
+You can now manually check that the program works correctly by using between5 and 10 different positive integers of your choice as program arguments.
+If this first test works and gives a sorted sequence of numbers you can continue.If not, the evaluation stops now.
+Now you have to check this operation by using the following command as anargument to the program:
+For linux:
+`shuf -i 1-1000 -n 3000 | tr "\n" " " `
+  
+For OSX:
+`jot -r 3000 1 1000 | tr '\n' ' '`
+  
+If the command works correctly, the person being evaluated should be able toexplain the difference in time used for each container selected.
+If there are any problems during the execution and/or explanation then theevaluation stops here.Vector is usually faster because it has continuous memory, while deque can be a bit slower because its memory is split into blocks.
+Exercise 00 – Bitcoin Exchange
+Used C++ STL(Standard Template Library) features (like containers, algorithms, iterators)
+I used std::map because it keeps data sorted and allows fast search by key.
+Q: Why not vector or list? Because map has O(log n) search. Vector would be O(n).
+Q: Handle invalid input? I check date format, value format, negative numbers, and values > 1000.
+If error, I print message and continue.
+Q: What if date is not found? A: I use the closest lower date with lower_bound.
+Q: Does program stop on error? A: No, it continues.
+Q: How do you calculate result? A: I multiply value by exchange rate.
+
+==============================
+Exercise 01 – RPN(Reverse Polish Notation)
+==============================
+Q: Container std::stack. RPN is LIFO (Last In, First Out) → how a stack works. Stack fits perfectly.
+Q: Why not vector? A: Stack is clearer and matches logic.
+Q: How does it work?
+- Read tokens
+- Number → push
+- Operator → pop two, calculate, push result
+
+Q: Which operators? A: + - * /
+Q: Do you support floats or parentheses?A: No.
+Q: How do you handle errors? A: Invalid tokens, not enough values, division by zero.
+
+Q: Example 8 9 * 9 -
+8 push
+9 push
+* → 72
+9 push
+- → 63
+==============================
+Exercise 02 – PmergeMe = 
+
+Q: Containers? A: std::vector and std::deque.
+Vector → fast access | Deque → different memory behavior. I compare performance.
+
+Q: Why not list? A: Too slow for binary search.
+Q: Which algorithm? A: Ford-Johnson (merge-insert sort).
+
+Q: Explain simply:
+- Make pairs, Sort by larger element
+- Build main chain for larger element
+- Insert small elements (Jacobsthal)
+- Insert leftover(unpaired)
+
+Q: Why special? A: Minimizes comparisons.
+Q: Jacobsthal? A: Special insertion order to reduce comparisons.
+Q: Complexity? A: O(n log n)
+Q: Why measure time? A: Compare vector vs deque.
+Q: Why different times?
+vector- stores data in one continuous block of memory like an array, so it’s fast to access
+deque- in multiple small blocks, so access is a bit slower, but inserts are easier
+
+Q: Input validation? Check digits, use strtol, check overflow.
+Q: Odd number of elements? Last element inserted separately.
+Q: Why not std::sort? A: Task requires manual algorithm.
+
+
+Q: What is the goal of this project?
+A: To practice STL containers, parsing, error handling, and algorithmic thinking in 3 different tasks.
+
+Q: Why did you focus on input validation so much?
+A: Because bad input can break logic. I validate early to keep behavior safe and predictable.
+
+Q: Did you use manual memory management?
+A: No. I use STL containers and RAII, so memory is cleaned automatically.
+
+Q: How do you handle errors?
+A: I print clear error messages and return non-zero exit code for invalid cases.
+
+ex00 (BitcoinExchange)
+
+Q: What does ex00 do?
+A: It reads Bitcoin rates by date and computes value conversion for each input line.
+
+Q: Which container did you use and why?
+A: std::map, because it keeps keys sorted and lets me quickly find values by key.
+
+Q: What if the exact date does not exist in database?
+A: I use the closest previous date, as required by subject logic.
+
+Q: What input errors do you check?
+A: Wrong format, invalid date, negative value, too large value, missing file.
+
+Q: Why is date format important here?
+A: Because date is the key for map lookup. Invalid date means lookup is meaningless.
+
+Q: What is a typical edge case in ex00?
+A: Date earlier than first database date (before 2009-01-01). It must return an error.
+
+ex01 (RPN)
+
+Q: What is RPN?
+A: Reverse Polish Notation, where operators come after operands, like 3 4 +.
+
+Q: Which container did you use and why?
+A: std::stack, because RPN naturally needs LIFO operations (Last In, First Out) → how a stack works. Stack fits perfectly.
+Q: Why not vector? A: Stack is clearer and matches logic.
+
+Q: How does your algorithm work?
+A: Number -> push to stack. Operator -> pop two values, compute, push result back.
+
+Q: When is expression valid? At the end, stack must have exactly one value.
+
+Q: What invalid cases do you reject?
+A: Not enough operands, unknown token, incomplete expression, empty input.
+
+Q: Why is stack perfect for this task?
+A: Because each new operator uses the most recent values first.
+
+ex02 (PmergeMe, main part)
+
+Q: What is the main idea of ex02?
+A: Implement Ford-Johnson merge-insert sort and compare vector vs deque timing.
+
+Q: High-level steps of your algorithm?
+A: Parse input, make pairs, normalize pairs, sort pairs by second value, build main chain, insert first values in Jacobsthal order, insert leftover value.
+
+Q: Why split into pairs?
+A: Pairing gives structure: each pair has small and big element, useful for controlled insertion.
+
+Q: Why sort pairs by second value?
+A: Then second values form an ordered backbone (main chain).
+
+Q: What is main chain?
+A: Sorted list of all pair second elements, used as base sorted sequence.
+
+Q: What is pend chain (or pending values)?
+A: The first elements of pairs, which are inserted later into main chain.
+
+Q: Why Jacobsthal order, not left-to-right?
+A: It reduces number of comparisons during binary insertions.
+
+Q: What are Jacobsthal numbers?
+A: Sequence with recurrence 
+
+J(n)=J(n−1)+2J(n−2), used to define insertion groups.
+
+Q: Why insert with lower_bound?
+A: It uses binary search, so position lookup is efficient in sorted chain.
+
+Q: What if input count is odd?
+A: One leftover value is inserted at the end with lower_bound.
+
+Q: Why implement for both vector and deque?
+A: Subject asks to compare two STL containers on same algorithm and same input.
+
+Q: Are results always identical for vector and deque?
+A: Yes, sorted output must be identical. Only timing can differ.
+
+Q: Which is usually faster in your tests?
+A: Usually vector is slightly faster because of contiguous memory/cache behavior.
+
+Q: Why did you use recursive merge sort for pair sorting?
+A: It matches the merge-insert spirit and gives clean, deterministic sorting of pairs.
+
+Q: Complexity in simple words?
+A: Better than naive insertion strategy in comparisons; uses structured insertion order plus binary search.
+
+Q: What do you print in output?
+A: Before sequence, after sequence, time for vector, time for deque (microseconds).
+
+Q: How did you test correctness?
+A: Small fixed tests, duplicates, invalid args, random inputs, large inputs (including 3000 numbers).
+
+Q: How did you test reliability?
+A: Error-path tests, exit code checks, and leak checks (leaks/valgrind).
+
+Q: What was hardest part?
+A: Correct Jacobsthal insertion order and keeping indexes consistent with pair positions.
+
+Q: If examiner says “why not just std::sort?”
+A: std::sort is easier, but task goal is implementing Ford-Johnson logic manually and understanding algorithm design.
+
+Tricky Defense Questions
+
+Q: Why do you reject +5 in input?
+A: Because parser accepts strict positive integer format without sign prefix, per chosen validation rules.
+
+Q: Can duplicates break algorithm?
+A: No. Duplicates are valid and handled correctly by lower_bound insertion.
+
+Q: Why not templates for vector/deque common code?
+A: I kept separate paths to match project style and make container comparison explicit.
+
+Q: What guarantees no leaks?
+A: No raw new/delete; all data in STL containers with automatic lifetime management.
+
+Q: One sentence: why your ex02 is correct?
+A: Every insertion keeps chain sorted via binary position search, so final sequence is fully sorted and includes all input values exactly once.Exercise 02 is about advanced sorting, using Jacobsthal order, and comparing containers.
+
+
+Final idea (important):This algorithm is a mix of:
+merge sort
+insertion
+The number of comparisons is close to O(n log n),but real time can be slower because insertion moves elements.
