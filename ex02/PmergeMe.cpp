@@ -6,7 +6,7 @@
 /*   By: aokhapki <aokhapki@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/07 23:33:07 by aokhapki          #+#    #+#             */
-/*   Updated: 2026/04/15 14:10:53 by aokhapki         ###   ########.fr       */
+/*   Updated: 2026/04/15 19:32:36 by aokhapki         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,17 +14,19 @@
 #include <string>
 #include <climits>
 #include <iostream>
-#include <algorithm>   // std::lower_bound, std::min
+#include <iomanip>
+#include <algorithm>   // lower_bound, min
 #include <chrono>      // time 1 ms = 1000 us / 1 us = 1000 ns
-#include <cstdlib>     // std::strtol string to int
+#include <cstdlib>     // strtol - string to int
 #include <cerrno>      // errno and ERANGE in strtol
-#include <utility>     // std::pair / std::make_pair
-#include <stdexcept>   // std::invalid_argument / std::overflow_error
-// m_vector and m_deque are class fields, not raw new pointers.
-// STL containers release memory automatically in their destructors (RAII).
-// When PmergeMe finishes, the memory is cleaned up automatically.
-// duration_cast converts the time difference to microseconds.
-// count() returns the numeric value stored in a std::chrono::duration.
+#include <utility>     // pair / make_pair
+#include <stdexcept>   // invalid_argument / overflow_error
+
+/*  STL containers release memory automatically in their destructors (RAII).
+	When PmergeMe finishes, the memory is cleaned up automatically.
+	duration_cast converts the time difference to microseconds.
+	count() returns the numeric value stored in a std::chrono::duration.
+*/
 
 PmergeMe::PmergeMe(){}
 PmergeMe::PmergeMe(const PmergeMe& src)
@@ -60,7 +62,7 @@ errno = 0;  // Clear the global error variable.
 char *endptr;  // Pointer to the rest of the string.
 str.c_str() to convert from C++ to C format for strtol (C function).
 std::strtol(str.c_str(), &endptr, 10); - strtol converts a str to a long val, 10 = in decimal only (from 0 to 9)
-Overflow - INT_MAX / negative / ERANGE = too large.
+Overflow - INT_MAX || negative || ERANGE - too large.
 if (*endptr != '\0') // "123abc" is not valid, endptr points to 'a', not '\0'
 */
 static long parseNumber(const std::string& str)
@@ -75,9 +77,7 @@ static long parseNumber(const std::string& str)
         throw std::invalid_argument("Error: Invalid argument");
     return num;
 }
-// Unified helper for both vector and deque for printing a sequence before sorting.
-// it != c.end(); or < for vector/deque, but best practice is != because < is not available for list, set, map...
-// it - iterator pointing to the current el in the container. *it dereferences & returns the element itself.
+// Print container values with a label.
 template <typename Container>
 static void printSequence(const std::string& label, const Container& c)
 {
@@ -105,20 +105,15 @@ static void sortPairsBySecond(std::vector<std::pair<int, int> >& pairs)
 }
 
 /*
-1st pair = 1, 2d pair = 2 ...
-After pairIndex = order[i] - 1, to make them C++-index.1 -> 0, 2 -> 1, 3 -> 2 ...
-order stores 1 pair index for inserting smaller values into mainChain.
-If no pairs (only 1 digit), return empty order, it is handled separately and is not stored here.
-The first pair always comes first.
-We use it to insert smaller values in an order, to reduces the number of comparisons during binary search.
-Jacobsthal numbers:
-J(0) = 0
-J(1) = 1
-J(n) = J(n - 1) + 2 * J(n - 2)
+Jacobsthal: 1, 3, 2, 5, 4, 10, 9, 8, 7, 6. How this order is built -  J(n) = J(n-1) + 2 × J(n-2):
+| # | Jacobsthal range  | Add indexes in reverse order for each group 
+| 1 | start 			| 1 		     
+| 2 | from 1 to 3 		| 3, 2 		     
+| 3 | from 3 to 5 		| 5, 4 		     
+| 4 | from 5 to 11 		| 10, 9, 8, 7, 6 
 */
 static std::vector<std::size_t> buildJacobsthalInsertionOrder(std::size_t pairCount)
-{
-	
+{	
 	std::vector<std::size_t> order;
 
 	if (pairCount == 0)
@@ -132,11 +127,10 @@ static std::vector<std::size_t> buildJacobsthalInsertionOrder(std::size_t pairCo
 	{
 		// Prevent going beyond the number of pairs.
 		std::size_t upperBound = std::min(currentJacobsthal, pairCount);
-		// Add pair indexes in reverse order from high to low inside this group.
+		// Add pair indexes in reverse order for this group.
 		for (std::size_t i = upperBound; i > previousJacobsthal; --i)
 			order.push_back(i);
-		// Move to the next Jacobsthal value using the formula J(n) = J(n - 1) + 2 * J(n - 2).
-		std::size_t nextJacobsthal = currentJacobsthal + 2 * previousJacobsthal;
+		std::size_t nextJacobsthal = currentJacobsthal + 2 * previousJacobsthal;// Move to the next Jacobsthal value
 		previousJacobsthal = currentJacobsthal;
 		currentJacobsthal = nextJacobsthal;
 	}
@@ -145,7 +139,14 @@ static std::vector<std::size_t> buildJacobsthalInsertionOrder(std::size_t pairCo
 /*
 mainChain already has all larger values in sorted order.
 Insert smaller values in Jacobsthal order.
-Use lower_bound so mainChain stays sorted.
+mainChain is always sorted, so use lower_bound to find the correct insert position.
+-----------------------------------------
+№	index	pair	insert 	  	mainChain
+1	  1		(5,9)	     5		[5, 9, 11, 12, 14, 15, 16, 17, 18, 19, 20]
+2	  3		(6,12)       6		[5, 6, 9, 11, 12, 14, 15, 16, 17, 18, 19, 20]
+...  ...     ...        ...      ......		
+10	  6		(8,16)       8		[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+-----------------------------------------
 */
 static void putSmallerValuesInJacobsthalOrder(std::vector<int>& mainChain,
 	const std::vector<std::pair<int, int> >& pairs)
@@ -153,13 +154,13 @@ static void putSmallerValuesInJacobsthalOrder(std::vector<int>& mainChain,
 	const std::vector<std::size_t> order = buildJacobsthalInsertionOrder(pairs.size());
 	for (std::size_t i = 0; i < order.size(); ++i)
 	{
-		std::size_t pairIndex = order[i] - 1; // order is 1-based, pairs is 0-based, so adjust index.
+		std::size_t pairIndex = order[i] - 1; // Convert 1-based pair number to 0-based index.
 		std::vector<int>::iterator pos = std::lower_bound(
 			mainChain.begin(), mainChain.end(), pairs[pairIndex].first);
 		mainChain.insert(pos, pairs[pairIndex].first);
 	}
 }
-// Same logic for deque.
+// Same insertion logic for deque.
 static void putSmallerValuesInJacobsthalOrder(std::deque<int>& mainChain,
 	const std::vector<std::pair<int, int> >& pairs)
 {
@@ -173,59 +174,25 @@ static void putSmallerValuesInJacobsthalOrder(std::deque<int>& mainChain,
 	}
 }
 
-/*
-run: orchestration (preparation and execution) is the conductor, while sortVectorFordJohnson() and sortDequeFordJohnson() are the performers.
-(For information: choreography is decentralized. The participants (dancers) react to each other according to the rules.)
-sortVectorFordJohnson: the entire Ford-Johnson logic for vector.
-sortDequeFordJohnson: the same logic for deque.
-Vector: method PmergeMe::sortVectorFordJohnson.
-The logic is as follows:
-Step A: build pairs.
-Take numbers two at a time and store them as (smaller, larger).
-Example: (7,3) becomes (3,7).
-
-Step B: sort pairs by second through fordJohnsonSort (without std::sort).
-The pairs are sorted with the same merge-insert approach,
-but the comparison is done on the larger element (second).
-After that, the larger values are in ascending order.
-
-Step C: build mainChain.
-Take only second from each pair and place it into mainChain.
-This gives you the already sorted backbone.
-
-Step D: insert smaller values with lower_bound.
-For each first value:
-lower_bound finds the insertion position in mainChain,
-insert puts the number there,
-so mainChain stays sorted after every insertion.
-
-Step E: if there is an unpaired value.
-Do the same:
-lower_bound
-insert
-and finally assign m_vector = mainChain.
-sortVectorFordJohnson and sortDequeFordJohnson do the same algorithm.
-Steps:
-1) Make pairs as (smaller, larger).
-2) Sort pairs by larger value.
-3) Build mainChain from larger values.
-4) Insert smaller values with Jacobsthal order and lower_bound.
-5) If one value is left (odd count), insert it with lower_bound.
-*/
-// The same logic is applied to deque in sortDequeFordJohnson, but with deque-specific types and methods.
-
-long long PmergeMe::sortVectorFordJohnson()
+/* Ford-Johnson flow:
+   Example:  ./PmergeMe 18 3 7 14 2 19 9 5 11 1 16 8 4 20 6 12 17 10 15 13 77
+1) split input and order pairs (small, large), unpaired - 77
+2) sort pairs by large value, after sorting by pair.second: 1:(5,9)  2:(1,11)  3:(6,12)  4:(7,14)  ...  10:(4,20)
+3) build chain from large values mainChain.push_back(pairs[i].second) = [9, 11, 12, 14, 15, 16, 17, 18, 19, 20]
+4) insert small values by Jacobsthal order
+5) insert unpaired value (if any): 77 -> mainChain = [1, 2, ..., 20, 77]
+6) final output: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 77 ✓
+ */
+void PmergeMe::sortVectorFordJohnson()
 {
-	std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
-	// Step 2.1 Ford-Johnson: split the input sequence into pairs (smaller, larger).
 	std::vector< std::pair<int, int> > pairs;
 	pairs.reserve(m_vector.size() / 2);
-	// If count is odd, keep last value for final insert.
+	// Keep last value if input size is odd.
 	bool hasUnpaired = (m_vector.size() % 2 != 0);
 	int unpaired = 0;
 	if (hasUnpaired)
 		unpaired = m_vector.back();
-	// Read input two values at a time [i] & [i+1] and store the smaller value first and the larger one second
+	// Read input two values at a time [i] & [i+1] and store (smaller,larger) pair
 	for (std::size_t i = 0; i + 1 < m_vector.size(); i += 2)
 	{
 		int left = m_vector[i];
@@ -235,42 +202,25 @@ long long PmergeMe::sortVectorFordJohnson()
 		else
 			pairs.push_back(std::make_pair(right, left));
 	}
-	sortPairsBySecond(pairs); //second = larger
+	sortPairsBySecond(pairs);
 	std::vector<int> mainChain;
 	mainChain.reserve(pairs.size()); 
-	//push larger elements only (already sorted)
 	for (std::size_t i = 0; i < pairs.size(); ++i) 
 	{
 		mainChain.push_back(pairs[i].second);
 	}
-	putSmallerValuesInJacobsthalOrder(mainChain, pairs); // insert the smaller vals in Jacobsthal order.
-	if (hasUnpaired) // insert unpaired value (if any).
+	putSmallerValuesInJacobsthalOrder(mainChain, pairs);
+	if (hasUnpaired)
 	{
 		std::vector<int>::iterator pos = std::lower_bound(
 			mainChain.begin(), mainChain.end(), unpaired);
 		mainChain.insert(pos, unpaired);
 	}
-	m_vector = mainChain;	// sorted result
-	std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
-	return std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+	m_vector = mainChain;
 }
-
-long long PmergeMe::sortDequeFordJohnson()
+// Same steps as vector version, but with deque chain.
+void PmergeMe::sortDequeFordJohnson()
 {
-	std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
-
-	// 1. Initialize the pair container.
-	// 2. Allocate memory for the pairs.
-	// 3. Check whether there is an unpaired element; if yes, store it.
-	// 4. Walk through deque two elements at a time, build pairs (smaller, larger), and store them in pairs.
-	// 5. Sort pairs by the larger element (second) using fordJohnsonSort.
-	// 6. Create mainChain as a deque<int>, fill it with only the larger elements from the pairs (they are already sorted).
-	// 7. Loop over pairs and, for each smaller element:
-	// 	- find the insertion position in mainChain with std::lower_bound
-	// 	- insert the smaller value there while keeping mainChain sorted
-	// 8. If there is an unpaired element, insert it into mainChain in the same way.
-	// 9. Assign mainChain back to m_deque.
-	// 10. Measure execution time and return it in microseconds.
 	std::vector< std::pair<int, int> > pairs;
 	pairs.reserve(m_deque.size() / 2);
 	bool hasUnpaired = (m_deque.size() % 2 != 0);
@@ -286,26 +236,27 @@ long long PmergeMe::sortDequeFordJohnson()
 		else
 			pairs.push_back(std::make_pair(right, left));
 	}
+ 
 	sortPairsBySecond(pairs);
+
 	std::deque<int> mainChain;
 	for (std::size_t i = 0; i < pairs.size(); ++i)
 	{
 		mainChain.push_back(pairs[i].second);
 	}
 	putSmallerValuesInJacobsthalOrder(mainChain, pairs);
+
 	if (hasUnpaired)
 	{
 		mainChain.insert(std::lower_bound(mainChain.begin(), mainChain.end(), unpaired), unpaired);
 	}
 	m_deque = mainChain;
-	std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
-	return std::chrono::duration_cast<std::chrono::microseconds> (end - start).count();
 }
 
 /*
-1. Check the number of arguments (at least 2 are needed: program + 1 number).
+1) check the number of arguments (at least 2 are needed: program + 1 number).
 	   .clear(); // Clear the containers before a new run.
-2. For each arg (starting from index 1 because 0 is the program name).
+2) for each arg (starting from index 1 because 0 is the program name).
 	- argv[i] comes as a C string (char*), so convert it to C++ std::string.
 	- validate input,
 	- fill vector and deque,
@@ -331,16 +282,29 @@ void PmergeMe::run(int ac, char **av)
 		m_vector.push_back(static_cast<int>(num));
 		m_deque.push_back(static_cast<int>(num));
 	}
+
+	// Print input sequence.
 	printSequence<std::vector<int>>("Before: ", m_vector);
-	long long vectorTimeUs = sortVectorFordJohnson();
-	long long dequeTimeUs = sortDequeFordJohnson();
-	printSequence(std::string("After: "), m_vector);
+	
+	// Measure time for vector sorting.
+	std::chrono::high_resolution_clock::time_point startVec = std::chrono::high_resolution_clock::now();
+	sortVectorFordJohnson();
+	std::chrono::high_resolution_clock::time_point endVec = std::chrono::high_resolution_clock::now();
+	double vectorTimeUs = std::chrono::duration<double, std::micro>(endVec - startVec).count();
+	
+	// Measure time for deque sorting.
+	std::chrono::high_resolution_clock::time_point startDeq = std::chrono::high_resolution_clock::now();
+	sortDequeFordJohnson();
+	std::chrono::high_resolution_clock::time_point endDeq = std::chrono::high_resolution_clock::now();
+	double dequeTimeUs = std::chrono::duration<double, std::micro>(endDeq - startDeq).count();
+	
+	// Print sorted sequence.
+	printSequence(std::string("After : "), m_vector);
+	
+	// Print timings with fixed precision.
+	std::cout << std::fixed << std::setprecision(5);
 	std::cout << "Time to process a range of " << m_vector.size()
 		<< " elements with std::vector : " << vectorTimeUs << " us" << std::endl;
 	std::cout << "Time to process a range of " << m_deque.size()
 		<< " elements with std::deque  : " << dequeTimeUs << " us" << std::endl;
 }
-
-
-
-

@@ -27,8 +27,8 @@ public:
 	PmergeMe& operator=(const PmergeMe& rhs);
 	~PmergeMe();
 	void run(int ac, char **av);
-	long long sortVectorFordJohnson();
-	long long sortDequeFordJohnson();
+	void sortVectorFordJohnson();
+	void sortDequeFordJohnson();
 };
 
 
