@@ -11,3 +11,53 @@ printf "date | value\n2011-01-03 | 0\n2011-01-03 | 1000\n2011-01-03 | 1000.01\n"
 Невалидный формат:
 printf "date | value\n2011-01-03, 3\nabcd\n" > t3.txt
 ./btc t3.txt
+
+
+ex02
+cd /Users/alima/Desktop/CPP_09/ex02
+make fclean && make
+Basic cases:
+./PmergeMe 3 2 1
+./PmergeMe 1
+./PmergeMe 10 4 8 2 7 3 9 1 6 5
+./PmergeMe 5 5 2 9 2 9
+
+Invalid args:
+./PmergeMe
+./PmergeMe 0 2 1
+./PmergeMe -1 2
+./PmergeMe 2147483648 1
+./PmergeMe 12abc 3
+./PmergeMe +5 2
+./PmergeMe "1 2" 3
+
+Random tests 
+macOS:
+./PmergeMe $(jot -r 10 1 100)
+./PmergeMe $(jot -r 100 1 100000)
+./PmergeMe $(jot -r 1000 1 1000000)
+Linux: 
+./PmergeMe $(shuf -i 1-100000 -n 100)
+./PmergeMe $(shuf -i 1-1000000 -n 1000)
+./PmergeMe $(shuf -i 1-1000000 -n 3000)
+
+Test from subject
+./PmergeMe $(jot -r 3000 1 1000000)
+./PmergeMe $(shuf -i 1-1000000 -n 3000)
+
+Замер внешнего времени выполнения
+/usr/bin/time -p ./PmergeMe $(jot -r 3000 1 1000000)
+/usr/bin/time -p ./PmergeMe $(shuf -i 1-1000000 -n 3000)
+
+Check leaks 
+macOS
+leaks --atExit -- ./PmergeMe $(jot -r 200 1 100000)
+
+Linux
+valgrind ./PmergeMe $(shuf -i 1-100000 -n 200)
+valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --errors-for-leak-kinds=all --error-exitcode=1 ./PmergeMe $(shuf -i 1-100000 -n 200)
+valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --errors-for-leak-kinds=all --error-exitcode=1 ./PmergeMe $(awk 'BEGIN{srand(); for(i=0;i<200;i++) printf "%d ", 1+int(rand()*100000)}')
+
+Return errors
+./PmergeMe 0 2 1 >/dev/null 2>&1; echo $?
+./PmergeMe -1 2 >/dev/null 2>&1; echo $?

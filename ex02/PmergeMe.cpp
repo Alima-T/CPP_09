@@ -6,7 +6,7 @@
 /*   By: aokhapki <aokhapki@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/04/07 23:33:07 by aokhapki          #+#    #+#             */
-/*   Updated: 2026/04/15 19:32:36 by aokhapki         ###   ########.fr       */
+/*   Updated: 2026/04/15 20:00:09 by aokhapki         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,18 +22,14 @@
 #include <utility>     // pair / make_pair
 #include <stdexcept>   // invalid_argument / overflow_error
 
-/*  STL containers release memory automatically in their destructors (RAII).
-	When PmergeMe finishes, the memory is cleaned up automatically.
-	duration_cast converts the time difference to microseconds.
-	count() returns the numeric value stored in a std::chrono::duration.
-*/
-
 PmergeMe::PmergeMe(){}
+
 PmergeMe::PmergeMe(const PmergeMe& src)
 {
 	this->m_vector = src.m_vector;
 	this->m_deque = src.m_deque;
 }
+
 PmergeMe& PmergeMe::operator=(const PmergeMe& rhs)
 {
 	if(this != &rhs)
@@ -57,13 +53,14 @@ static bool isDigitsOnly(const std::string& str)
 	}
 	return true;
 }
+
 /*
-errno = 0;  // Clear the global error variable.
-char *endptr;  // Pointer to the rest of the string.
-str.c_str() to convert from C++ to C format for strtol (C function).
+errno = 0; - Clear the global error variable.
+char *endptr; - Pointer to the rest of the string.
+str.c_str() - to convert from C++ to C format for strtol (C function).
 std::strtol(str.c_str(), &endptr, 10); - strtol converts a str to a long val, 10 = in decimal only (from 0 to 9)
 Overflow - INT_MAX || negative || ERANGE - too large.
-if (*endptr != '\0') // "123abc" is not valid, endptr points to 'a', not '\0'
+if (*endptr != '\0') - "123abc" is not valid, endptr points to 'a', not '\0'
 */
 static long parseNumber(const std::string& str)
 {
@@ -77,6 +74,7 @@ static long parseNumber(const std::string& str)
         throw std::invalid_argument("Error: Invalid argument");
     return num;
 }
+
 // Print container values with a label.
 template <typename Container>
 static void printSequence(const std::string& label, const Container& c)
@@ -87,21 +85,50 @@ static void printSequence(const std::string& label, const Container& c)
 	std::cout << std::endl;
 }
 
-// Non-generic helper: sort pair elements by their second value.
-static void sortPairsBySecond(std::vector<std::pair<int, int> >& pairs)
+// Recursive Ford-Johnson merge-insert sort for pairs by their second value.
+// Implements the algorithm from TAOCP Vol.3, page 184 (merge sort approach).
+static std::vector<std::pair<int, int> > mergePairsBySecond(
+	const std::vector<std::pair<int, int> >& left,
+	const std::vector<std::pair<int, int> >& right)
 {
-	for (std::size_t i = 1; i < pairs.size(); ++i)
+	std::vector<std::pair<int, int> > merged;
+	merged.reserve(left.size() + right.size());
+	
+	std::size_t i = 0, j = 0;
+	while (i < left.size() && j < right.size())
 	{
-		std::pair<int, int> current = pairs[i];
-		std::size_t j = i;
-
-		while (j > 0 && pairs[j - 1].second > current.second)
-		{
-			pairs[j] = pairs[j - 1];
-			--j;
-		}
-		pairs[j] = current;
+		if (left[i].second <= right[j].second)
+			merged.push_back(left[i++]);
+		else
+			merged.push_back(right[j++]);
 	}
+	while (i < left.size())
+		merged.push_back(left[i++]);
+	while (j < right.size())
+		merged.push_back(right[j++]);
+	
+	return merged;
+}
+
+/*  Recursive merge sort for pairs by their second value.
+	1. Base case: if size <= 1, already sorted.
+	2. Split into left and right halves.
+	3. Recursively sort both halves.
+	4. Merge the two sorted halves back together.
+	Time complexity: O(n log n), space complexity: O(n).
+*/
+static std::vector<std::pair<int, int> > sortPairsBySecondRecursive(
+	std::vector<std::pair<int, int> > pairs)
+{
+	if (pairs.size() <= 1)
+		return pairs;
+	std::size_t mid = pairs.size() / 2;
+	std::vector<std::pair<int, int> > left(pairs.begin(), pairs.begin() + mid);
+	std::vector<std::pair<int, int> > right(pairs.begin() + mid, pairs.end());
+	// Recursively sort both halves
+	left = sortPairsBySecondRecursive(left);
+	right = sortPairsBySecondRecursive(right);
+	return mergePairsBySecond(left, right);
 }
 
 /*
@@ -123,19 +150,20 @@ static std::vector<std::size_t> buildJacobsthalInsertionOrder(std::size_t pairCo
 		return order;
 	std::size_t previousJacobsthal = 1;
 	std::size_t currentJacobsthal = 3;
-	while (previousJacobsthal < pairCount) // Build groups until all pairs are processed
+	while (previousJacobsthal < pairCount)
 	{
 		// Prevent going beyond the number of pairs.
 		std::size_t upperBound = std::min(currentJacobsthal, pairCount);
 		// Add pair indexes in reverse order for this group.
 		for (std::size_t i = upperBound; i > previousJacobsthal; --i)
 			order.push_back(i);
-		std::size_t nextJacobsthal = currentJacobsthal + 2 * previousJacobsthal;// Move to the next Jacobsthal value
+		std::size_t nextJacobsthal = currentJacobsthal + 2 * previousJacobsthal;
 		previousJacobsthal = currentJacobsthal;
 		currentJacobsthal = nextJacobsthal;
 	}
 	return order;
 }
+
 /*
 mainChain already has all larger values in sorted order.
 Insert smaller values in Jacobsthal order.
@@ -160,6 +188,7 @@ static void putSmallerValuesInJacobsthalOrder(std::vector<int>& mainChain,
 		mainChain.insert(pos, pairs[pairIndex].first);
 	}
 }
+
 // Same insertion logic for deque.
 static void putSmallerValuesInJacobsthalOrder(std::deque<int>& mainChain,
 	const std::vector<std::pair<int, int> >& pairs)
@@ -202,7 +231,7 @@ void PmergeMe::sortVectorFordJohnson()
 		else
 			pairs.push_back(std::make_pair(right, left));
 	}
-	sortPairsBySecond(pairs);
+	pairs = sortPairsBySecondRecursive(pairs);
 	std::vector<int> mainChain;
 	mainChain.reserve(pairs.size()); 
 	for (std::size_t i = 0; i < pairs.size(); ++i) 
@@ -218,6 +247,7 @@ void PmergeMe::sortVectorFordJohnson()
 	}
 	m_vector = mainChain;
 }
+
 // Same steps as vector version, but with deque chain.
 void PmergeMe::sortDequeFordJohnson()
 {
@@ -237,7 +267,7 @@ void PmergeMe::sortDequeFordJohnson()
 			pairs.push_back(std::make_pair(right, left));
 	}
  
-	sortPairsBySecond(pairs);
+	pairs = sortPairsBySecondRecursive(pairs);
 
 	std::deque<int> mainChain;
 	for (std::size_t i = 0; i < pairs.size(); ++i)
@@ -283,22 +313,20 @@ void PmergeMe::run(int ac, char **av)
 		m_deque.push_back(static_cast<int>(num));
 	}
 
-	// Print input sequence.
 	printSequence<std::vector<int>>("Before: ", m_vector);
 	
-	// Measure time for vector sorting.
+	// time for vector sorting.
 	std::chrono::high_resolution_clock::time_point startVec = std::chrono::high_resolution_clock::now();
 	sortVectorFordJohnson();
 	std::chrono::high_resolution_clock::time_point endVec = std::chrono::high_resolution_clock::now();
 	double vectorTimeUs = std::chrono::duration<double, std::micro>(endVec - startVec).count();
 	
-	// Measure time for deque sorting.
+	// time for deque sorting.
 	std::chrono::high_resolution_clock::time_point startDeq = std::chrono::high_resolution_clock::now();
 	sortDequeFordJohnson();
 	std::chrono::high_resolution_clock::time_point endDeq = std::chrono::high_resolution_clock::now();
 	double dequeTimeUs = std::chrono::duration<double, std::micro>(endDeq - startDeq).count();
 	
-	// Print sorted sequence.
 	printSequence(std::string("After : "), m_vector);
 	
 	// Print timings with fixed precision.
