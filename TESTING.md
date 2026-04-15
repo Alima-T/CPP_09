@@ -15,7 +15,7 @@ make fclean && make
 # Nonexistent file:
 ./btc nofile.txt
 
-# Date before first in DB:
+# Date before first (before 2009-01-01) in DB:
 printf "date | value\n2008-12-31 | 1\n" > t1.txt
 ./btc t1.txt
 rm t1.txt
